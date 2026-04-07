@@ -189,6 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await fetch(SHEETS_URL, {
                 method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify(contactData)
             });
         } catch (err) {
