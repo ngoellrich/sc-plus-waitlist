@@ -186,19 +186,32 @@ document.addEventListener('DOMContentLoaded', () => {
             states: selectedStates.join(', ')
         };
 
-        try {
-            await fetch(SHEETS_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(contactData)
-            });
-        } catch (err) {
-            console.error('Submission failed:', err);
-        }
+        // Submit via hidden form to avoid CORS issues with Google Apps Script
+        const iframe = document.createElement('iframe');
+        iframe.name = 'hidden-submit';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
 
-        // Redirect to success page
-        window.location.href = 'success.html';
+        const hiddenForm = document.createElement('form');
+        hiddenForm.method = 'POST';
+        hiddenForm.action = SHEETS_URL;
+        hiddenForm.target = 'hidden-submit';
+
+        Object.entries(contactData).forEach(([key, value]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            hiddenForm.appendChild(input);
+        });
+
+        document.body.appendChild(hiddenForm);
+        hiddenForm.submit();
+
+        // Give it a moment to send, then redirect
+        setTimeout(() => {
+            window.location.href = 'success.html';
+        }, 1000);
     });
 
     // ── Mouse glow on form ──
