@@ -167,47 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
         statesGrid.appendChild(label);
     });
 
-    // ── GoHighLevel CRM Integration ──
-    // TODO: Add your GHL API key and location ID
-    const GHL_CONFIG = {
-        apiKey: 'pit-d8263a39-76f9-477d-a52f-7211c0f137fc',
-        locationId: 'EjqCKc9ZKLZjkiEEF93c',
-        enabled: true
-    };
-
-    async function submitToCRM(data) {
-        if (!GHL_CONFIG.enabled) {
-            console.log('[GHL] Not configured yet — form data:', data);
-            return;
-        }
-
-        try {
-            const response = await fetch('https://rest.gohighlevel.com/v1/contacts/upsert', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${GHL_CONFIG.apiKey}`
-                },
-                body: JSON.stringify({
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                    email: data.email,
-                    phone: data.phone,
-                    companyName: data.company,
-                    locationId: GHL_CONFIG.locationId,
-                    tags: ['waitlist'],
-                    customField: {
-                        active_states: data.states.join(', ')
-                    }
-                })
-            });
-
-            if (!response.ok) throw new Error(`GHL responded ${response.status}`);
-            console.log('[GHL] Contact upserted successfully');
-        } catch (err) {
-            console.error('[GHL] Submission failed:', err);
-        }
-    }
+    // ── Google Sheets Integration ──
+    const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxOdhb461kxOHsnlfawUOxMLPpXYvolQK0GRAm20KhtylN8qusU4Z1bfHzSCLfjnA392Q/exec';
 
     // ── Form Submission ──
     form.addEventListener('submit', async (e) => {
@@ -222,13 +183,17 @@ document.addEventListener('DOMContentLoaded', () => {
             lastName: formData.get('last-name'),
             email: formData.get('email'),
             phone: formData.get('phone'),
-            states: selectedStates
+            states: selectedStates.join(', ')
         };
 
-        console.log('Waitlist Entry:', contactData);
-
-        // Send to CRM
-        await submitToCRM(contactData);
+        try {
+            await fetch(SHEETS_URL, {
+                method: 'POST',
+                body: JSON.stringify(contactData)
+            });
+        } catch (err) {
+            console.error('Submission failed:', err);
+        }
 
         // Redirect to success page
         window.location.href = 'success.html';
