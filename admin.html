@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SC+ Admin</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            display: block;
+            padding: 2rem;
+        }
+
+        .login-screen {
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.25rem;
+        }
+
+        .login-screen h1 {
+            font-size: 1.5rem;
+        }
+
+        .login-screen input {
+            width: 320px;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+        }
+
+        .login-screen input:focus {
+            outline: none;
+            border-color: var(--solar-primary);
+            box-shadow: 0 0 0 3px var(--focus-ring);
+        }
+
+        .login-screen button {
+            width: 320px;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 10px;
+            background: var(--solar-primary);
+            color: #000;
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .login-screen button:hover {
+            opacity: 0.85;
+        }
+
+        .login-error {
+            color: #c0392b;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .admin-panel {
+            display: none;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .admin-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .admin-count {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .admin-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid var(--glass-border);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .admin-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .admin-table tr:hover td {
+            background: rgba(244, 186, 62, 0.04);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .refresh-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            background: transparent;
+            font-family: var(--font-main);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .refresh-btn:hover {
+            border-color: var(--solar-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-screen" id="login-screen">
+        <h1>Admin Login</h1>
+        <input type="password" id="passkey-input" placeholder="Enter passkey" autocomplete="off">
+        <button id="login-btn">Log in</button>
+        <p class="login-error" id="login-error">Incorrect passkey</p>
+    </div>
+
+    <div class="admin-panel" id="admin-panel">
+        <div class="admin-header">
+            <h1>Waitlist Submissions</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span class="admin-count" id="count"></span>
+                <button class="refresh-btn" id="refresh-btn">Refresh</button>
+            </div>
+        </div>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Company</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>States</th>
+                </tr>
+            </thead>
+            <tbody id="submissions-body"></tbody>
+        </table>
+        <div class="empty-state" id="empty-state" style="display:none;">No submissions yet.</div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://wsbjiqhndtudqdifdpom.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYmppcWhuZHR1ZHFkaWZkcG9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NzQ2MjMsImV4cCI6MjA5MTE1MDYyM30.OkxPcF3KDHHpG0NV3y6g_ui0dcuKzI5s97cewhe8QzU';
+        const PASSKEY = SUPABASE_KEY;
+
+        const loginScreen = document.getElementById('login-screen');
+        const adminPanel = document.getElementById('admin-panel');
+        const passInput = document.getElementById('passkey-input');
+        const loginBtn = document.getElementById('login-btn');
+        const loginError = document.getElementById('login-error');
+        const tbody = document.getElementById('submissions-body');
+        const countEl = document.getElementById('count');
+        const emptyState = document.getElementById('empty-state');
+        const refreshBtn = document.getElementById('refresh-btn');
+
+        function handleLogin() {
+            if (passInput.value === PASSKEY) {
+                loginScreen.style.display = 'none';
+                adminPanel.style.display = 'block';
+                loadSubmissions();
+            } else {
+                loginError.style.display = 'block';
+            }
+        }
+
+        loginBtn.addEventListener('click', handleLogin);
+        passInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleLogin();
+            loginError.style.display = 'none';
+        });
+
+        async function loadSubmissions() {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/submissions?select=*&order=created_at.desc`, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+            });
+
+            const data = await res.json();
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                emptyState.style.display = 'block';
+                countEl.textContent = '0 submissions';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            countEl.textContent = `${data.length} submission${data.length !== 1 ? 's' : ''}`;
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                const date = new Date(row.created_at).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric',
+                    hour: 'numeric', minute: '2-digit'
+                });
+                tr.innerHTML = `
+                    <td>${date}</td>
+                    <td>${row.company || ''}</td>
+                    <td>${row.first_name || ''} ${row.last_name || ''}</td>
+                    <td>${row.email || ''}</td>
+                    <td>${row.phone || ''}</td>
+                    <td>${row.states || ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        refreshBtn.addEventListener('click', loadSubmissions);
+    </script>
+</body>
+</html>

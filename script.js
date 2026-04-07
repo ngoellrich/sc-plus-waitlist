@@ -167,8 +167,9 @@ document.addEventListener('DOMContentLoaded', () => {
         statesGrid.appendChild(label);
     });
 
-    // ── Google Sheets Integration ──
-    const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxOdhb461kxOHsnlfawUOxMLPpXYvolQK0GRAm20KhtylN8qusU4Z1bfHzSCLfjnA392Q/exec';
+    // ── Supabase Integration ──
+    const SUPABASE_URL = 'https://wsbjiqhndtudqdifdpom.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzYmppcWhuZHR1ZHFkaWZkcG9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NzQ2MjMsImV4cCI6MjA5MTE1MDYyM30.OkxPcF3KDHHpG0NV3y6g_ui0dcuKzI5s97cewhe8QzU';
 
     // ── Form Submission ──
     form.addEventListener('submit', async (e) => {
@@ -179,39 +180,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const contactData = {
             company: formData.get('company'),
-            firstName: formData.get('first-name'),
-            lastName: formData.get('last-name'),
+            first_name: formData.get('first-name'),
+            last_name: formData.get('last-name'),
             email: formData.get('email'),
             phone: formData.get('phone'),
             states: selectedStates.join(', ')
         };
 
-        // Submit via hidden form to avoid CORS issues with Google Apps Script
-        const iframe = document.createElement('iframe');
-        iframe.name = 'hidden-submit';
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/submissions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                },
+                body: JSON.stringify(contactData)
+            });
+        } catch (err) {
+            console.error('Submission failed:', err);
+        }
 
-        const hiddenForm = document.createElement('form');
-        hiddenForm.method = 'POST';
-        hiddenForm.action = SHEETS_URL;
-        hiddenForm.target = 'hidden-submit';
-
-        Object.entries(contactData).forEach(([key, value]) => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = value;
-            hiddenForm.appendChild(input);
-        });
-
-        document.body.appendChild(hiddenForm);
-        hiddenForm.submit();
-
-        // Give it a moment to send, then redirect
-        setTimeout(() => {
-            window.location.href = 'success.html';
-        }, 1000);
+        window.location.href = 'success.html';
     });
 
     // ── Mouse glow on form ──
